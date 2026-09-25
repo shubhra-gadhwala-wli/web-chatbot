@@ -1,0 +1,44 @@
+.citation-chip__wrap {
+  display: inline-flex;
+  flex-direction: column;
+}
+
+.citation-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  margin: var(--space-1) var(--space-2) 0 0;
+}
+
+.citation-chip--removed {
+  color: var(--color-text-disabled);
+  cursor: default;
+  border-style: dashed;
+}
+
+.citation-chip__detail {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-bg-surface-raised);
+  border-radius: var(--radius-sm);
+  max-width: 480px;
+}
+
+.citation-chip__location {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.citation-chip__text {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: var(--text-sm);
+}

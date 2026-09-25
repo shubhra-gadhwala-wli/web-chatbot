@@ -1,0 +1,70 @@
+/* Design token seed from the UX spec (WLI-20 section 0). Placeholder hex
+   values pending UI's formal palette; semantic roles are stable. */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --color-bg-canvas: #f5f6f8;
+  --color-bg-surface: #ffffff;
+  --color-bg-surface-raised: #eef1f5;
+  --color-border-default: #d4d8de;
+  --color-border-focus: #2f6fed;
+  --color-text-primary: #1a1d21;
+  --color-text-secondary: #5b6270;
+  --color-text-disabled: #9aa1ac;
+  --color-accent: #2f6fed;
+  --color-accent-contrast: #ffffff;
+  --color-success: #1a7f4b;
+  --color-warning: #9a6400;
+  --color-danger: #b3261e;
+  --color-info: #2f5fa8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg-canvas: #16181c;
+    --color-bg-surface: #1e2126;
+    --color-bg-surface-raised: #262a31;
+    --color-border-default: #383d46;
+    --color-text-primary: #eef0f3;
+    --color-text-secondary: #a7adb8;
+    --color-text-disabled: #5b6270;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: var(--text-base);
+}
+
+button,
+input {
+  font-family: inherit;
+}

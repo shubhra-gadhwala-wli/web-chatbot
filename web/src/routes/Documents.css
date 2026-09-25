@@ -1,0 +1,120 @@
+.documents__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.documents__title {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  margin: 0;
+}
+
+.documents__dropzone {
+  border: 2px dashed var(--color-border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-5);
+  transition: border-color 120ms ease;
+}
+
+.documents__dropzone--active {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.documents__dropzone--slim {
+  padding: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.documents__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.documents__row {
+  display: grid;
+  grid-template-columns: 1fr 80px 100px 140px 80px;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  transition: none;
+}
+
+.documents__filename {
+  font-weight: var(--weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.documents__size,
+.documents__date {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.documents__delete {
+  background: none;
+  border: none;
+  color: var(--color-danger);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  justify-self: end;
+}
+
+.documents__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.documents__skeleton-row {
+  height: 56px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-surface-raised) 25%,
+    var(--color-bg-surface) 50%,
+    var(--color-bg-surface-raised) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .documents__skeleton-row {
+    animation: none;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .documents__row {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+    gap: var(--space-1);
+  }
+
+  .documents__delete {
+    justify-self: start;
+  }
+}

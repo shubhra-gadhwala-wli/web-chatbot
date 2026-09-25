@@ -1,0 +1,247 @@
+.conversation-view {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 160px);
+}
+
+.conversation-view__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border-default);
+  margin-bottom: var(--space-3);
+}
+
+.conversation-view__back {
+  background: none;
+  border: none;
+  font-size: var(--text-xl);
+  cursor: pointer;
+}
+
+.conversation-view__title {
+  flex: 1;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  margin: 0;
+}
+
+.conversation-view__voice-toggle {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.conversation-view__list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.conversation-view__hint {
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-top: var(--space-8);
+}
+
+.conversation-view__not-found {
+  text-align: center;
+  padding: var(--space-8);
+}
+
+.conversation-view__voice-notice,
+.conversation-view__mic-error {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-2);
+}
+
+.conversation-view__voice-notice button {
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+
+.bubble {
+  max-width: 70%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+}
+
+.bubble p {
+  margin: 0;
+}
+
+.bubble--user {
+  align-self: flex-end;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.bubble--assistant {
+  align-self: flex-start;
+  background: var(--color-bg-surface-raised);
+}
+
+.bubble--info {
+  border-left: 3px solid var(--color-info);
+}
+
+.bubble--error {
+  border-left: 3px solid var(--color-danger);
+}
+
+.bubble--pending {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.bubble__cta {
+  display: inline-block;
+  margin-top: var(--space-2);
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  padding: 0;
+}
+
+.bubble__citations {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+}
+
+.typing-indicator {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.typing-indicator span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-text-secondary);
+  animation: typing-bounce 1.2s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.typing-indicator__fallback {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-indicator {
+    display: none;
+  }
+  .typing-indicator__fallback {
+    display: inline;
+    color: var(--color-text-secondary);
+  }
+}
+
+@keyframes typing-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-default);
+}
+
+.composer__mic {
+  border: none;
+  background: var(--color-bg-surface-raised);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  font-size: var(--text-lg);
+}
+
+.composer__mic--listening {
+  background: var(--color-accent);
+  animation: mic-pulse 1.2s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composer__mic--listening {
+    animation: none;
+  }
+}
+
+@keyframes mic-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(47, 111, 237, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(47, 111, 237, 0);
+  }
+}
+
+.composer__input {
+  flex: 1;
+  resize: none;
+  max-height: 96px;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-default);
+  font-size: var(--text-base);
+  font-family: inherit;
+}
+
+.composer__input:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+}
+
+.composer__send {
+  border: none;
+  background: var(--color-accent);
+  color: #fff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  font-size: var(--text-lg);
+}
+
+.composer__send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .bubble {
+    max-width: 88%;
+  }
+}
