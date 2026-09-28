@@ -78,15 +78,29 @@ class VectorStore:
 
     def delete_document(self, account_id: str, document_id: str) -> None:
         with self._lock:
+            self._refresh()
             self._table.delete(
                 f"account_id = {_quote(account_id)} AND document_id = {_quote(document_id)}")
 
     # ------------------------------------------------------------- reading
+    def _refresh(self) -> None:
+        """Reopen the table handle to the latest commit.
+
+        Ingest runs as a separate OS process (see dev.py); a table handle
+        opened once does not otherwise see writes committed by other
+        processes, so every read must check out latest first.
+        """
+        try:
+            self._table.checkout_latest()
+        except Exception:  # pragma: no cover - older lancedb API
+            self._table = self._db.open_table(TABLE)
+
     def search(self, account_id: str, query_vector, limit: int) -> list[dict]:
         """Account predicate is applied as a LanceDB pre-filter BEFORE top-k."""
         where = f"account_id = {_quote(account_id)} AND state = 'ready'"
         self.last_where = where
         with self._lock:
+            self._refresh()
             q = self._table.search([float(x) for x in query_vector])
             try:
                 q = q.where(where, prefilter=True)
@@ -111,7 +125,9 @@ class VectorStore:
 
     def count(self, account_id: str | None = None, document_id: str | None = None,
               state: str | None = None) -> int:
-        rows = self._table.to_arrow().to_pylist()
+        with self._lock:
+            self._refresh()
+            rows = self._table.to_arrow().to_pylist()
         def keep(r):
             return ((account_id is None or r["account_id"] == account_id)
                     and (document_id is None or r["document_id"] == document_id)
