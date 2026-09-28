@@ -85,12 +85,23 @@ export function ConversationView() {
     setPending({ userMessageId: optimisticId, text });
     try {
       const result = await api.ask(conversationId, text);
-      // AskResponse.message is the assistant's reply; the optimistic user
-      // bubble (already rendered) is left as-is rather than replaced.
-      setMessages((prev) => [...prev, result.message]);
+      // AskResponse.message is the persisted *user* message (confirms the
+      // optimistic bubble); the assistant's reply lives only in `answer`, so
+      // it's synthesized into its own bubble here.
+      const assistantMessage: Message = {
+        id: `${result.message.id}-answer`,
+        role: "assistant",
+        content: result.answer.text,
+        status: "completed",
+        createdAt: result.message.createdAt,
+      };
+      setMessages((prev) => [
+        ...prev.map((m) => (m.id === optimisticId ? result.message : m)),
+        assistantMessage,
+      ]);
       setAnswersByMessageId((prev) => ({
         ...prev,
-        [result.message.id]: { kind: result.answer.kind, citations: result.answer.citations },
+        [assistantMessage.id]: { kind: result.answer.kind, citations: result.answer.citations },
       }));
       if (ttsOn && result.answer.kind === "answered") {
         speak(result.answer.text);
