@@ -39,6 +39,10 @@ def test_dev_migrate_twice_is_idempotent(tmp_path, monkeypatch, capsys):
 
 def test_startup_fails_fast_without_session_secret(tmp_path, monkeypatch):
     monkeypatch.setenv("RAG_DATA_DIR", str(tmp_path / ".local-data"))
+    # A developer machine may have a real backend/.env with a secret already
+    # configured for local runs; point the loader at a file that can't exist
+    # so this test genuinely exercises the "no secret configured" path.
+    monkeypatch.setenv("RAG_ENV_FILE", str(tmp_path / "no-such.env"))
     monkeypatch.delenv("RAG_SESSION_SECRET", raising=False)
     with pytest.raises(ConfigError) as exc:
         load_config()
@@ -64,6 +68,9 @@ def test_startup_fails_fast_on_model_checksum_mismatch(tmp_path, monkeypatch):
 def test_dev_entrypoint_exits_nonzero_with_clear_message(tmp_path):
     env = dict(os.environ)
     env["RAG_DATA_DIR"] = str(tmp_path / ".local-data")
+    # See test_startup_fails_fast_without_session_secret: bypass any real
+    # backend/.env on this machine so the missing-secret path is reachable.
+    env["RAG_ENV_FILE"] = str(tmp_path / "no-such.env")
     env.pop("RAG_SESSION_SECRET", None)
     proc = subprocess.run([sys.executable, "-m", "backend.app.dev", "--migrate"],
                           cwd=str(ROOT), env=env, capture_output=True, text=True)

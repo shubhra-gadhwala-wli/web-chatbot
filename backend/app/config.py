@@ -81,7 +81,8 @@ class Config:
 
 
 def load_config(config_path: Path | None = None, *, require_secret: bool = True) -> Config:
-    _load_dotenv(BACKEND_DIR / ".env")
+    env_file = Path(os.environ.get("RAG_ENV_FILE", str(BACKEND_DIR / ".env")))
+    _load_dotenv(env_file)
     path = config_path or Path(os.environ.get("RAG_CONFIG", DEFAULT_CONFIG))
     if not path.is_file():
         raise ConfigError(f"configuration file not found: {path}")
