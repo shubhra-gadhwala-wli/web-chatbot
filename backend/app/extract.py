@@ -24,7 +24,7 @@ class Extracted:
 
 
 def run_isolated_extraction(config, account_id: str, document_id: str,
-                            source_path: Path) -> Extracted:
+                            source_path: Path, source_format: str = "text") -> Extracted:
     sub = config.section("ingest").get("subprocess", {})
     out_dir = safe_child(config.work_dir, account_id)
     out_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -41,6 +41,7 @@ def run_isolated_extraction(config, account_id: str, document_id: str,
         str(int(sub.get("max_output_bytes", 33554432))),
         str(int(sub.get("cpu_seconds", 20))),
         str(int(sub.get("address_space_bytes", 1073741824))),
+        source_format,
     ]
     # Restricted environment: no proxies, no HF tokens, no inherited secrets.
     env = {"PATH": "/usr/bin:/bin", "LC_ALL": "C.UTF-8", "PYTHONHASHSEED": "0",

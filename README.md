@@ -79,6 +79,11 @@ assets from the backend in production; its routes are `/documents` and
 extraction runs in an OS-isolated subprocess (`backend/app/extract_child.py`);
 a document that fails extraction is stored with `status: "failed"` and a
 `failureCode`, surfaced in the UI rather than as a silent error.
+PDF support requires the system `poppler-utils` package (`/usr/bin/pdftotext`).
+Its parser inherits the child CPU, memory, file, and process limits; the parent
+also enforces a wall timeout. No JavaScript or forms are executed. Deployments
+must keep Poppler patched because it parses untrusted PDFs. Image-only PDFs
+require OCR, which is outside this release.
 
 ## Tests
 

@@ -62,7 +62,9 @@ class IngestWorker:
         generation = int(doc["generation"])
         try:
             source = self.repo.storage_path(account_id, document_id)
-            extracted = run_isolated_extraction(self.config, account_id, document_id, source)
+            source_format = "pdf" if doc["original_filename"].lower().endswith(".pdf") else "text"
+            extracted = run_isolated_extraction(self.config, account_id, document_id, source,
+                                                source_format)
 
             pieces = chunk_text(
                 extracted.text,

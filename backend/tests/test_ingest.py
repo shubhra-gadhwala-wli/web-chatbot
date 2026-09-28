@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import secrets
+import shutil
 
 import pytest
 
@@ -13,6 +14,40 @@ from .conftest import deterministic_vector
 from .helpers import make_account
 
 TEXT = "\n\n".join(f"Paragraph {i} about maintenance windows and rotation." for i in range(5))
+
+
+def _simple_pdf(message: str) -> bytes:
+    stream = f"BT /F1 12 Tf 72 720 Td ({message}) Tj ET".encode()
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream",
+    ]
+    pdf = b"%PDF-1.4\n"
+    offsets = [0]
+    for i, obj in enumerate(objects, 1):
+        offsets.append(len(pdf))
+        pdf += f"{i} 0 obj\n".encode() + obj + b"\nendobj\n"
+    xref = len(pdf)
+    pdf += b"xref\n0 6\n0000000000 65535 f \n"
+    pdf += b"".join(f"{n:010d} 00000 n \n".encode() for n in offsets[1:])
+    pdf += b"trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n" + str(xref).encode() + b"\n%%EOF\n"
+    return pdf
+
+
+@pytest.mark.skipif(not shutil.which("pdftotext"), reason="Poppler unavailable")
+def test_pdf_is_indexed_and_bad_pdf_fails_safely(runtime, fake_embeddings):
+    account = make_account(runtime, "pdf@example.test")
+    worker = IngestWorker(runtime.config, runtime.repo, runtime.vectors)
+    good = _upload(runtime, account, _simple_pdf("PDF maintenance windows"), "notes.pdf")
+    assert worker.process(account, good) == "ready"
+    assert "PDF maintenance windows" in runtime.repo.retrieve_ready_chunks(
+        account, deterministic_vector("PDF maintenance windows"), 5)[0]["text"]
+    bad = _upload(runtime, account, b"%PDF-not-a-document", "bad.pdf")
+    assert worker.process(account, bad) == "failed"
+    assert runtime.repo.get_document(account, bad)["failure_code"] == "invalid_pdf"
 
 
 def _upload(runtime, account_id, data: bytes, name="notes.txt"):
