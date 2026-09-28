@@ -303,8 +303,16 @@ def create_app(runtime: Runtime | None = None) -> FastAPI:
     @router.delete("/documents/{document_id}", status_code=204)
     async def delete_document(request: Request, document_id: str):
         account_id = account_id_of(request)
-        _require_opaque(account_id, "document", document_id)
-        repo.delete_document(account_id, document_id)
+        if not is_opaque_id(document_id):
+            audit.emit("cross_account_denied", account_id, "document", None,
+                       current_request_id.get())
+            return Response(status_code=204)
+        try:
+            repo.delete_document(account_id, document_id)
+        except NotFound:
+            # Deletion is idempotent and must not disclose whether the document
+            # ever existed (or exists for someone else): always 204.
+            pass
         return Response(status_code=204)
 
     @router.get("/documents/{document_id}/chunks/{chunk_id}")
