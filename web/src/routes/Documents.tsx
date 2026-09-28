@@ -15,6 +15,13 @@ function hasAcceptedExtension(name: string): boolean {
   return ACCEPTED_EXTENSIONS.some((ext) => name.toLowerCase().endsWith(ext));
 }
 
+function randomId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
 export function Documents() {
   const { push } = useToast();
   const [documents, setDocuments] = useState<DocumentRecord[] | null>(null);
@@ -63,7 +70,7 @@ export function Documents() {
         continue;
       }
       const optimistic: DocumentRecord = {
-        id: `optimistic-${crypto.randomUUID()}`,
+        id: `optimistic-${randomId()}`,
         originalFilename: file.name,
         byteSize: file.size,
         status: "uploaded",

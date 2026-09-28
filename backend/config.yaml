@@ -1,0 +1,53 @@
+# Non-secret local defaults (ADR 2). Environment variables override every value.
+# NEVER put API keys or session secrets here; use environment / .env (gitignored).
+app:
+  host: "127.0.0.1"          # loopback only by default
+  port: 8080
+  data_dir: "./.local-data"  # created 0700, files 0600
+
+auth:
+  session_ttl_days: 14
+  argon2:
+    time_cost: 3
+    memory_cost_kib: 65536
+    parallelism: 1
+  min_password_length: 12
+  max_password_bytes: 1024
+  rate_limit:
+    window_seconds: 300
+    max_attempts: 10
+
+ingest:
+  max_upload_bytes: 26214400   # 25 MiB
+  allowed_extensions: [".txt", ".md", ".pdf"]
+  queue_depth: 100
+  subprocess:
+    wall_seconds: 30
+    cpu_seconds: 20
+    address_space_bytes: 1073741824   # 1 GiB
+    max_output_bytes: 33554432        # 32 MiB extracted text
+  chunk_tokens: 800
+  chunk_overlap_tokens: 120
+
+embedding:
+  # Pinned model (ADR 3). Checksum is verified at startup; see README for how to
+  # refresh it when intentionally changing the pin.
+  model_id: "sentence-transformers/all-MiniLM-L6-v2"
+  revision: "c9745ed1d9f207416be6d2e6f8de32d1f16199bf"
+  dimension: 384
+  # sha256 of the model weight file in the local cache.
+  weights_sha256: "53aa51172d142c89d9012cce15ae4d6cc0ca6895895114379cacb4fab128d9db"
+
+retrieval:
+  top_k: 5
+  min_similarity: 0.25
+
+generation:
+  # OpenAI-compatible endpoint. Default points at a LOCAL server; configure it.
+  # API key (if any) comes from the RAG_GENERATION_API_KEY environment variable.
+  base_url: "http://127.0.0.1:11434/v1"
+  model: "qwen2.5:3b-instruct"
+  timeout_seconds: 60
+  max_concurrency: 2
+  retry_after_seconds: 5
+  max_excerpt_chars: 1200

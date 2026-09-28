@@ -1,6 +1,20 @@
-node_modules/
-dist/
+# Private local data (documents, vectors, SQLite, model cache, audit log)
+.local-data/
+**/.local-data/
+
+# Real secrets are never committed; only .env.sample is tracked.
+.env
+backend/.env
+*.env
+!.env.sample
+!backend/.env.sample
+
+# Python
 .venv/
 __pycache__/
-*.pyc
-.env
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# Node
+node_modules/
