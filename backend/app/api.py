@@ -26,9 +26,8 @@ log = logging.getLogger("api")
 MAX_UPLOAD = 26214400
 ALLOWED_EXTENSIONS = (".txt", ".md", ".pdf")
 # Extensions whose bytes must decode as UTF-8 text at upload time. PDFs are
-# binary and are validated instead by the isolated extraction worker
-# (see extract_child.py), which today only decodes text — a PDF upload is
-# accepted here and surfaced as a failed document once extraction rejects it.
+# binary and are parsed or rejected by the isolated extraction worker
+# (see extract_child.py).
 TEXT_EXTENSIONS = (".txt", ".md")
 STATE_CHANGING = {"POST", "PUT", "PATCH", "DELETE"}
 

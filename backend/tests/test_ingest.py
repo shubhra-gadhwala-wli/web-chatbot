@@ -38,7 +38,34 @@ def _simple_pdf(message: str) -> bytes:
 
 
 @pytest.mark.skipif(not shutil.which("pdftotext"), reason="Poppler unavailable")
-def test_pdf_is_indexed_and_bad_pdf_fails_safely(runtime, fake_embeddings):
+def test_pdf_is_indexed_and_bad_pdf_fails_safely(config, fake_embeddings, monkeypatch):
+    # Keep this parser/ingest regression independent of LanceDB initialization.
+    # The real vector adapter has separate tests; it can stall in restricted CI.
+    from backend.app import runtime as runtime_module
+
+    class Vectors:
+        def __init__(self, *_args):
+            self.rows = []
+
+        def stage(self, account, doc, generation, rows):
+            self.rows.extend(dict(account_id=account, document_id=doc,
+                                  generation=generation, state="staging", **row)
+                             for row in rows)
+
+        def promote(self, account, doc, generation):
+            for row in self.rows:
+                if (row["account_id"], row["document_id"], row["generation"]) == (account, doc, generation):
+                    row["state"] = "ready"
+
+        def delete_document(self, account, doc):
+            self.rows = [r for r in self.rows if (r["account_id"], r["document_id"]) != (account, doc)]
+
+        def search(self, account, _query, limit):
+            return [dict(r, similarity=1.0) for r in self.rows
+                    if r["account_id"] == account and r["state"] == "ready"][:limit]
+
+    monkeypatch.setattr(runtime_module, "VectorStore", Vectors)
+    runtime = runtime_module.build_runtime(config, run_preflight=False)
     account = make_account(runtime, "pdf@example.test")
     worker = IngestWorker(runtime.config, runtime.repo, runtime.vectors)
     good = _upload(runtime, account, _simple_pdf("PDF maintenance windows"), "notes.pdf")
