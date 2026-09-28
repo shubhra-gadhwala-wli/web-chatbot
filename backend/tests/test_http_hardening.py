@@ -124,18 +124,38 @@ def test_path_safety_rejects_traversal_and_symlinks(runtime, tmp_path):
         safe_child(root, link, new_id())
 
 
-def test_upload_rejects_non_txt_and_non_utf8(runtime):
+def test_upload_rejects_unsupported_extension_and_non_utf8(runtime):
     c = client(runtime)
     c.post("/api/v1/auth/register", json={"email": "u@example.test", "password": PASSWORD})
     headers = {"Idempotency-Key": "k" * 20}
-    assert c.post("/api/v1/documents", files={"file": ("a.pdf", b"%PDF-1.7", "application/pdf")},
+    assert c.post("/api/v1/documents", files={"file": ("a.exe", b"MZ\x90\x00", "application/octet-stream")},
                   headers=headers).status_code == 415
     assert c.post("/api/v1/documents", files={"file": ("a.txt", b"\xff\xfe\x00bad", "text/plain")},
+                  headers=headers).status_code == 415
+    assert c.post("/api/v1/documents", files={"file": ("a.md", b"\xff\xfe\x00bad", "text/markdown")},
                   headers=headers).status_code == 415
     assert c.post("/api/v1/documents", files={"file": ("a.txt", b"", "text/plain")},
                   headers=headers).status_code == 400
     assert c.post("/api/v1/documents", files={"file": ("a.txt", b"hello", "text/plain")},
                   headers={"Idempotency-Key": "short"}).status_code == 400
+
+
+def test_upload_accepts_md_and_pdf_extensions(runtime):
+    # .md is plain text and is accepted outright; .pdf is accepted at the
+    # upload boundary (extension + size only) since binary content validation
+    # for PDFs happens in the isolated extraction worker, not synchronously
+    # here (see backend/app/extract_child.py).
+    c = client(runtime)
+    c.post("/api/v1/auth/register", json={"email": "md@example.test", "password": PASSWORD})
+    headers = {"Idempotency-Key": "m" * 20}
+    md = c.post("/api/v1/documents", files={"file": ("notes.md", b"# Title\n\nbody", "text/markdown")},
+               headers=headers)
+    assert md.status_code == 201
+
+    headers2 = {"Idempotency-Key": "p" * 20}
+    pdf = c.post("/api/v1/documents", files={"file": ("doc.pdf", b"%PDF-1.7\n...", "application/pdf")},
+                headers=headers2)
+    assert pdf.status_code == 201
 
 
 def test_upload_is_idempotent_and_uses_opaque_storage(runtime):

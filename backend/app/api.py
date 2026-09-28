@@ -24,7 +24,12 @@ from .runtime import Runtime, build_runtime, current_request_id
 log = logging.getLogger("api")
 
 MAX_UPLOAD = 26214400
-ALLOWED_EXTENSIONS = (".txt",)
+ALLOWED_EXTENSIONS = (".txt", ".md", ".pdf")
+# Extensions whose bytes must decode as UTF-8 text at upload time. PDFs are
+# binary and are validated instead by the isolated extraction worker
+# (see extract_child.py), which today only decodes text — a PDF upload is
+# accepted here and surfaced as a failed document once extraction rejects it.
+TEXT_EXTENSIONS = (".txt", ".md")
 STATE_CHANGING = {"POST", "PUT", "PATCH", "DELETE"}
 
 
@@ -269,8 +274,10 @@ def create_app(runtime: Runtime | None = None) -> FastAPI:
         if not idempotency_key or not (16 <= len(idempotency_key) <= 128):
             raise ApiError(400, "validation_error", "Idempotency-Key header is required")
         filename = (file.filename or "").strip()
-        if not filename.lower().endswith(ALLOWED_EXTENSIONS):
-            raise ApiError(415, "unsupported_media_type", "Only .txt files are supported")
+        lower_filename = filename.lower()
+        if not lower_filename.endswith(ALLOWED_EXTENSIONS):
+            raise ApiError(415, "unsupported_media_type", "Only .txt, .md, and .pdf files are supported")
+        is_text = lower_filename.endswith(TEXT_EXTENSIONS)
 
         # Stream with a hard byte ceiling BEFORE any database record exists.
         digest = hashlib.sha256()
@@ -288,12 +295,13 @@ def create_app(runtime: Runtime | None = None) -> FastAPI:
         data = b"".join(blocks)
         if not data:
             raise ApiError(400, "validation_error", "File is empty")
-        if b"\x00" in data[:1 << 20]:
-            raise ApiError(415, "unsupported_media_type", "File does not look like text")
-        try:
-            data.decode("utf-8")
-        except UnicodeDecodeError:
-            raise ApiError(415, "unsupported_media_type", "File is not valid UTF-8 text")
+        if is_text:
+            if b"\x00" in data[:1 << 20]:
+                raise ApiError(415, "unsupported_media_type", "File does not look like text")
+            try:
+                data.decode("utf-8")
+            except UnicodeDecodeError:
+                raise ApiError(415, "unsupported_media_type", "File is not valid UTF-8 text")
 
         row = repo.create_upload(account_id, filename, size, digest.hexdigest(), idempotency_key)
         # Path is derived only from generated IDs and is containment-checked.

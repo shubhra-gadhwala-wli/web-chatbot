@@ -19,7 +19,7 @@ auth:
 
 ingest:
   max_upload_bytes: 26214400   # 25 MiB
-  allowed_extensions: [".txt"]
+  allowed_extensions: [".txt", ".md", ".pdf"]
   queue_depth: 100
   subprocess:
     wall_seconds: 30
