@@ -470,3 +470,22 @@ class Repository:
             "WHERE ct.account_id = ? AND ct.message_id = ? AND d.deleted_at IS NULL",
             (account_id, message_id)).fetchall()
         return [dict(r) for r in rows]
+
+    def citations_for_messages(self, account_id: str, message_ids: Sequence[str]) -> dict[str, list[dict]]:
+        """Batch lookup to avoid N+1 queries when replaying a message list."""
+        if not message_ids:
+            return {}
+        placeholders = ",".join("?" for _ in message_ids)
+        rows = self.db.conn().execute(
+            "SELECT ct.message_id AS message_id, ct.chunk_id AS chunk_id, ct.document_id AS document_id, "
+            "ch.location_kind AS location_kind, ch.location_start AS location_start, "
+            "ch.location_end AS location_end, d.original_filename AS document_name "
+            "FROM citations ct "
+            "JOIN chunks ch ON ch.account_id = ct.account_id AND ch.id = ct.chunk_id "
+            "JOIN documents d ON d.account_id = ct.account_id AND d.id = ct.document_id "
+            f"WHERE ct.account_id = ? AND ct.message_id IN ({placeholders}) AND d.deleted_at IS NULL",
+            (account_id, *message_ids)).fetchall()
+        by_message: dict[str, list[dict]] = {mid: [] for mid in message_ids}
+        for r in rows:
+            by_message[r["message_id"]].append(dict(r))
+        return by_message

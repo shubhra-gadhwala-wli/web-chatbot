@@ -59,9 +59,17 @@ def document_json(row: dict) -> dict:
     }
 
 
-def message_json(row: dict) -> dict:
-    return {"id": row["id"], "role": row["role"], "content": row["content"],
-            "status": row["status"], "createdAt": _iso(row["created_at"])}
+def message_json(row: dict, citations: list[dict] | None = None) -> dict:
+    out = {"id": row["id"], "role": row["role"], "content": row["content"],
+           "status": row["status"], "createdAt": _iso(row["created_at"])}
+    if row["role"] == "assistant":
+        out["citations"] = [{
+            "documentId": c["document_id"], "documentName": c["document_name"],
+            "chunkId": c["chunk_id"],
+            "location": {"kind": c["location_kind"], "start": c["location_start"],
+                         "end": c["location_end"]},
+        } for c in (citations or [])]
+    return out
 
 
 def conversation_json(row: dict) -> dict:
@@ -365,7 +373,10 @@ def create_app(runtime: Runtime | None = None) -> FastAPI:
         account_id = account_id_of(request)
         _require_opaque(account_id, "conversation", conversation_id)
         items, next_cursor = repo.list_messages(account_id, conversation_id, cursor, limit)
-        return {"items": [message_json(r) for r in items], "nextCursor": next_cursor}
+        citations_by_message = repo.citations_for_messages(
+            account_id, [r["id"] for r in items if r["role"] == "assistant"])
+        return {"items": [message_json(r, citations_by_message.get(r["id"])) for r in items],
+                "nextCursor": next_cursor}
 
     @router.post("/conversations/{conversation_id}/messages")
     async def ask(request: Request, conversation_id: str, response: Response):

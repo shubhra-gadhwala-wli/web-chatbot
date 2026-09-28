@@ -94,6 +94,48 @@ def test_qa_forged_citation_handle_rejected(runtime, fake_embeddings, monkeypatc
         assert cid in chunk_ids, f"forged citation handle leaked into response: {cit}"
 
 
+def test_replayed_message_includes_citations(runtime, fake_embeddings, monkeypatch):
+    """WLI-34 regression: GET /conversations/{id}/messages must return the same
+    citations the initial POST returned, not omit them on replay."""
+    rt = runtime
+    a = make_account(rt, "erin@example.test", PASSWORD)
+    question = "The maintenance window is 02:00 to 04:00 UTC every Sunday."
+    doc_id, chunk_ids = ready_document(rt, a, "runbook.txt", question, deterministic_vector)
+    c = client(rt)
+    c.cookies.update(login_cookie(rt, a))
+
+    from backend.app import llm
+
+    def fake_complete(self, system, prompt, *a, **k):
+        handle = prompt.split("[[", 1)[1].split("]]", 1)[0]
+        return f"The window is 02:00-04:00 UTC. [[{handle}]]"
+
+    monkeypatch.setattr(llm.ChatClient, "complete", fake_complete)
+
+    conv = c.post("/api/v1/conversations", json={"title": "Replay check"})
+    assert conv.status_code == 201, conv.text
+    conversation_id = conv.json()["id"]
+
+    resp = c.post(f"/api/v1/conversations/{conversation_id}/messages",
+                  json={"text": question,
+                        "clientRequestId": "replay-citation-req-0001"})
+    assert resp.status_code == 201, resp.text
+    posted_citations = resp.json()["answer"]["citations"]
+    assert posted_citations, "setup expected a verified citation on the initial POST"
+    assert posted_citations[0]["documentId"] == doc_id
+    assert posted_citations[0]["chunkId"] in chunk_ids
+
+    replay = c.get(f"/api/v1/conversations/{conversation_id}/messages")
+    assert replay.status_code == 200, replay.text
+    items = replay.json()["items"]
+    assistant_messages = [m for m in items if m["role"] == "assistant"]
+    assert assistant_messages, "expected an assistant message in the replayed history"
+    assert assistant_messages[0]["citations"] == posted_citations
+
+    user_messages = [m for m in items if m["role"] == "user"]
+    assert "citations" not in user_messages[0]
+
+
 def test_qa_security_headers_present(runtime, fake_embeddings):
     rt = runtime
     a = make_account(rt, "dana@example.test", PASSWORD)
