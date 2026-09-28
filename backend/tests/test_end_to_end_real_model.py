@@ -38,6 +38,14 @@ def real_runtime(runtime, monkeypatch):
     monkeypatch.delenv("RAG_SKIP_MODEL_CHECK", raising=False)
     from backend.app import embeddings
     embeddings.load_model(runtime.config)
+    # DOCUMENT is short enough that the default 800-token chunk target would
+    # fold the whole thing into a single chunk, which would let the golden
+    # path pass even if cosine ranking across chunks were broken. Force real
+    # multi-chunk splitting so retrieval actually has to rank chunks by
+    # similarity, not just return "the only chunk there is".
+    ingest_section = runtime.config.raw.setdefault("ingest", {})
+    ingest_section["chunk_tokens"] = 20
+    ingest_section["chunk_overlap_tokens"] = 5
     return runtime
 
 
@@ -129,3 +137,45 @@ def test_real_two_account_isolation(real_runtime):
         assert "maintenance window" not in row["text"]
         assert row["document_id"] != nearest[0]["document_id"]
     print("ISOLATION OK: A retrieved", len(rt.repo.retrieve_ready_chunks(a, vector, 5)), "own chunks")
+
+
+def test_real_vector_store_returns_cosine_similarity_not_constant_distance(real_runtime):
+    """Regression for WLI-27: VectorStore.search() must apply the cosine metric
+    to the LanceDB query, not silently fall back to an unmetriced/L2 distance.
+
+    Isolated at the VectorStore level (bypassing chunking, ingest and the LLM)
+    so it fails directly against a LanceDB API mismatch instead of being
+    masked by unrelated pipeline behaviour."""
+    rt = real_runtime
+    from backend.app import embeddings
+
+    near_duplicate = "The maintenance window for the billing service is 02:00 to 04:00 UTC every Sunday."
+    unrelated_docs = {
+        "doc-bread": "Alpha bakes sourdough bread every weekend at the local farmers market.",
+        "doc-report": "The quarterly report shows revenue increased by twelve percent year over year.",
+        "doc-cats": "Cats sleep for most of the day and enjoy sunny windowsills in the afternoon.",
+    }
+
+    for doc_id, text in unrelated_docs.items():
+        vector = embeddings.embed_query(rt.config, text)
+        rt.vectors.stage("acct-const-check", doc_id, 1, [{"chunk_id": f"c-{doc_id}", "vector": vector}])
+        rt.vectors.promote("acct-const-check", doc_id, 1)
+
+    near_vector = embeddings.embed_query(rt.config, near_duplicate)
+    rt.vectors.stage("acct-const-check", "doc-target", 1,
+                     [{"chunk_id": "c-target", "vector": near_vector}])
+    rt.vectors.promote("acct-const-check", "doc-target", 1)
+
+    query = embeddings.embed_query(rt.config, "When is the maintenance window for billing?")
+    results = rt.vectors.search("acct-const-check", query, limit=10)
+    by_chunk = {r["chunk_id"]: r["similarity"] for r in results}
+
+    target_similarity = by_chunk["c-target"]
+    other_similarities = [s for chunk_id, s in by_chunk.items() if chunk_id != "c-target"]
+
+    assert target_similarity > 0.5, f"near-duplicate similarity too low: {target_similarity}"
+    assert len(set(round(s, 6) for s in by_chunk.values())) > 1, (
+        "all returned similarities are identical -- the cosine metric is not "
+        "affecting the LanceDB distance (constant-distance regression)")
+    assert all(target_similarity > s for s in other_similarities), (
+        f"near-duplicate ({target_similarity}) did not rank above unrelated docs {other_similarities}")
